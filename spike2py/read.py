@@ -109,8 +109,16 @@ def _parse_mat_data(mat_data: mat_data) -> parsed_mat_data:
         CHANNEL_DATA_LENGTH["wavemark"]: _parse_mat_wavemark,
     }
     parsed_data = dict()
+    
+    # for key, value in mat_data.items():
+    #     print(key)
+    #     print(value.dtype)
+    #     print(type(value))
     for key, value in mat_data.items():
-        parsed_data[key] = parser_lookup[len(value.dtype)](value)
+        if len(value.dtype)== 2 :
+            continue
+        else:
+            parsed_data[key] = parser_lookup[len(value.dtype)](value)
     return parsed_data
 
 
