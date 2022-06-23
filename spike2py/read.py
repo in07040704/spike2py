@@ -120,6 +120,7 @@ def _parse_mat_data(mat_data: mat_data) -> parsed_mat_data:
         elif len(value.dtype)== 9 :
             print("Please contain not only waveform but also")
         else:
+            print(parser_lookup[len(value.dtype)](value))
             parsed_data[key] = parser_lookup[len(value.dtype)](value)
     return parsed_data
 

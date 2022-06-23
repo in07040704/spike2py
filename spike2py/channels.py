@@ -4,6 +4,7 @@ from typing import NamedTuple, Literal
 import numpy as np
 
 import spike2py.plot as plot
+import spike2py.myproc as myproc
 import spike2py.sig_proc as sig_proc
 
 from spike2py.types import (
@@ -95,6 +96,10 @@ class Event(Channel):
         """
         plot.plot_channel(self, save=save)
         return self
+    
+    def my_pr(self, save: Literal[True, False] = False) -> None:
+        myproc.my_proc_channel(self, save=save)
+        return self    
 
 
 class Keyboard(Channel):
@@ -141,6 +146,9 @@ class Keyboard(Channel):
         plot.plot_channel(self, save=save)
         return self
 
+    def my_pr(self, save: Literal[True, False] = False) -> None:
+        myproc.my_proc_channel(self, save=save)
+        return self
 
 class Waveform(Channel, sig_proc.SignalProcessing):
     """Waveform channel class
@@ -188,6 +196,10 @@ class Waveform(Channel, sig_proc.SignalProcessing):
             Set to `True` to save Waveform figure to `path_save_figures`
         """
         plot.plot_channel(self, save=save)
+        return self
+
+    def my_pr(self, save: Literal[True, False] = None) -> None:
+        myproc.my_proc_channel(self, save=save)
         return self
 
 
@@ -247,3 +259,8 @@ class Wavemark(Channel):
         """
         plot.plot_channel(self, save=save)
         return self
+        
+    def my_pr(self, save: Literal[True, False] = None):
+        myproc.my_proc_channel(self, save=save)
+        return self
+        

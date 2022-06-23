@@ -2,7 +2,7 @@ from typing import NamedTuple, List, Literal, Union
 from pathlib import Path
 import pickle
 
-from spike2py import channels, read, plot
+from spike2py import channels, read, plot, myproc
 
 
 CHANNEL_GENERATOR = {
@@ -139,7 +139,12 @@ class Trial:
         return read.read(self.info.file, self.info.channels)
 
     def plot(self, save: Literal[True, False] = None) -> None:
+        print("Hellow")
         plot.plot_trial(self, save=save)
+
+    def my_pr(self, save: Literal[True, False] = None) -> None:
+        print("Hellow")
+        myproc.proc_trial(self, save=save)
 
     def save(self):
         """Save trial

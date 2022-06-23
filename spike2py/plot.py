@@ -54,6 +54,7 @@ def plot_channel(spike2py_channel: all_channels, save: Literal[True, False]) -> 
     if channel_type == "Waveform":
         # Split axis generation and plotting to allow reuse of plotting with trial plotting
         fig, ax = plt.subplots(figsize=WAVEFORM_FIG_SIZE)
+        print("which2")
         _plot_waveform(spike2py_channel, ax)
     else:
         ticks_line = _TicksLine(spike2py_channel)
@@ -142,6 +143,7 @@ class _TicksLine:
         self._finalise_plot(ax1)
 
         if self.ch_type == "Keyboard":
+            print("hellow")
             self._plot_codes(ax1)
         if (self.ch_type == "Wavemark") and ax2:
             self._plot_action_potentials(ax2)
@@ -224,12 +226,14 @@ def _fig_height_n_subplots(spike2py_trial: "trial.Trial") -> Tuple[int, int]:
 
 
 def _plot_trial(spike2py_trial: "trial.Trial", ax: Subplot):
+    print("hear")
     waveform_counter = 1
     other_ch_counter = 0
     n_subplots = len(ax)
     for channel, channel_type in spike2py_trial.channels:
         current_channel = spike2py_trial.__getattribute__(channel)
         if channel_type == "waveform":
+            print("which1")
             _plot_waveform(
                 waveform=current_channel,
                 ax=ax[n_subplots - waveform_counter],
@@ -237,6 +241,7 @@ def _plot_trial(spike2py_trial: "trial.Trial", ax: Subplot):
             )
             waveform_counter += 1
         elif len(current_channel.times) != 0:
+            print("Who")
             ticks_line = _TicksLine(
                 ticks_line_channel=current_channel,
                 color=_get_color(other_ch_counter),
