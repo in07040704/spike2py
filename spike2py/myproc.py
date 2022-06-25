@@ -1,5 +1,6 @@
 from imaplib import Int2AP
 from typing import Literal, Tuple
+import pandas as pd
 
 import numpy as np
 import matplotlib
@@ -89,8 +90,6 @@ def _proc_waveform(
 
 def _proc_waveform2(
     waveform: "channels.Waveform",
-    dic1: dict,
-    dic2: dict,
     threshold: float
     #ax: Subplot,
     #color: str = _get_color(0),
@@ -101,7 +100,6 @@ def _proc_waveform2(
     v_data_1=v_data > threshold
     t_data_2=t_data[v_data_1]
 
-    s_time_dict={}
     diff_t_data = np.diff(t_data_2)
     diff_t_data1=diff_t_data > 0.3
     diff_t_data2=np.insert(diff_t_data1, 0, False)
@@ -112,22 +110,91 @@ def _proc_waveform2(
     s_time2=t_data_2[diff_t_data3]
     s_time2=np.append(s_time2,t_data_2[-1])
 
+    # s_time_dict={}
+    # max_list=[]
+    # for ti_n1, ti_n2 in zip(s_time, s_time2):
+    #     bin_time = [(t_data >= ti_n1) & (t_data < ti_n2)]
+    #     bin_volte = v_data[bin_time]
+    #     max_volte =bin_volte.max()
+    #     max_list.append(max_volte)
+
+
+    # s_time_dict["codes"] = [f'w{q}' for q in range(len(s_time))]
+    # s_time_dict["times"] = s_time
+    # s_time_dict["max_volte"] = max_list
+    # print("W_n_dic:")
+    # print(s_time_dict)
+
+    return s_time, s_time2
+
+def _proc_waveform3(
+    waveform: "channels.Waveform",
+    A_time: np.array,
+    B_time: np.array
+    #ax: Subplot,
+    #color: str = _get_color(0),
+) -> None:
+
+    v_data=waveform.values
+    t_data=waveform.times
     max_list=[]
-    for ti_n1, ti_n2 in zip(s_time, s_time2):
+    for ti_n1, ti_n2 in zip(A_time, B_time):
         bin_time = [(t_data >= ti_n1) & (t_data < ti_n2)]
         bin_volte = v_data[bin_time]
         max_volte =bin_volte.max()
         max_list.append(max_volte)
 
+    return max_list
 
-    s_time_dict["codes"] = [f'w{q}' for q in range(len(s_time))]
-    s_time_dict["times"] = s_time
-    s_time_dict["max_volte"] = max_list
-    print("W_n_dic:")
-    print(s_time_dict)    
+def s_detect(
+    s_dic: dict, 
+    str_time: np.array,
+    ) -> None:
+    s_n_list=[]
+    it1 = s_dic["times"][:-1]
+    it2 = s_dic["times"][1:]
+    last_code=s_dic["codes"][-1]
+    for s_n, time1, time2 in zip(s_dic["codes"], it1, it2):
+        ti1=list((time1 <= str_time) & ( str_time < time2))
+        ti_time1=ti1.count(True)
+        s_n_list.extend([s_n] * ti_time1)
+        if time2 == s_dic["times"][-1]:
+            ti3=list(time2 <= str_time)
+            ti_time3=ti3.count(True)
+            s_n_list.extend([last_code] * ti_time3)
+    s_n_list_1=[]
+    N_s = len(s_dic["codes"]) - len(s_n_list)
+    s_n_list_1.extend(["control"] * N_s)
+
+    s_n_list = s_n_list_1 + s_n_list
+
+    return s_n_list
 
 
+def w_detect(
+    w_dic: dict, 
+    str_time: np.array,
+    ) -> None:
+    W_n_list=[]
+    it1 = w_dic["times"][:-1]
+    it2 = w_dic["times"][1:]
+    last_code=w_dic["codes"][-1]
+    for w_n, time1, time2 in zip(w_dic["codes"], it1, it2):
+        ti1=list((time1 <= str_time) & ( str_time <= time1+30))
+        ti_time1=ti1.count(True)
+        W_n_list.extend([w_n] * ti_time1)
+        ti2=list((time1+30 < str_time) & ( str_time < time2))
+        ti_time2=ti2.count(True)
+        W_n_list.extend(["pass"] * ti_time2)
+        if time2 == w_dic["times"][-1]:
+            ti3=list((time2 <= str_time) & ( str_time <= time2+30))
+            ti_time3=ti3.count(True)
+            W_n_list.extend([last_code] * ti_time3)
+    
+    N_w = len(w_dic["codes"]) - len(W_n_list)
+    W_n_list.extend(["pass"] * N_w)
 
+    return W_n_list
 
 def _save_plot(channel_info: "channels.ChannelInfo") -> None:
     fig_name = (
@@ -282,7 +349,7 @@ class _TicksLine:
     #     ax1.grid()
 
 
-def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False]) -> None:
+def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False], threshold: float) -> None:
     # fig_height, n_subplots = _proc_n_sub(spike2py_trial)
     # if n_subplots == 1:
     #     print(
@@ -295,8 +362,7 @@ def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False]) -> Non
     #     figsize=(12, fig_height),
     #     gridspec_kw={"hspace": 0},
     # )
-    print("Are you")
-    _proc_trial(spike2py_trial)
+    _proc_trial(spike2py_trial, threshold)
     if save:
         _save_plot(spike2py_trial.name)
 
@@ -326,10 +392,7 @@ def _proc_n_sub(spike2py_trial: "trial.Trial"):
     return fig_height, n_subplots
 
 
-def _proc_trial(spike2py_trial: "trial.Trial"):
-    print("hear?")
-    print(spike2py_trial)
-    print(spike2py_trial.channels)
+def _proc_trial(spike2py_trial: "trial.Trial", threshold: float):
     for channel, channel_type in spike2py_trial.channels:
         if channel_type == "keyboard":
             current_channel = spike2py_trial.__getattribute__(channel)
@@ -337,16 +400,43 @@ def _proc_trial(spike2py_trial: "trial.Trial"):
                 ticks_line_channel=current_channel,
             )
             s_dic, w_dic = ticks_line.myproc()
-            print("I am")
 
         elif channel == "Myhy_R":
             current_channel = spike2py_trial.__getattribute__(channel)
-            _proc_waveform2(
+            str_time, end_time=_proc_waveform2(
                 waveform=current_channel,
-                dic1=s_dic, 
-                dic2=w_dic,
-                threshold=0.01
+                threshold=threshold
             )
-            print(" Hear.")
         else:
             pass
+    
+    S_n_list = s_detect(s_dic=s_dic, str_time=str_time)
+    W_n_list = w_detect(w_dic=w_dic, str_time=str_time)
+
+    s_time_dict={}
+    s_time_dict["stim"] = S_n_list
+    s_time_dict["CCodes"] = W_n_list
+    s_time_dict["codes"] = [f'w{q}' for q in range(len(str_time))]
+    s_time_dict["start_times"] = str_time
+    s_time_dict["end_times"] = end_time
+
+
+    for channel, channel_type in spike2py_trial.channels:
+        if channel_type == "waveform":
+            current_channel = spike2py_trial.__getattribute__(channel)
+            max_list=_proc_waveform3(
+                waveform=current_channel,
+                A_time= str_time,
+                B_time= end_time
+            )
+            s_time_dict[channel] = max_list
+        
+        else:
+            pass
+    df = pd.DataFrame(data=s_time_dict)
+    print(df)
+
+
+
+
+

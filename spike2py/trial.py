@@ -139,12 +139,12 @@ class Trial:
         return read.read(self.info.file, self.info.channels)
 
     def plot(self, save: Literal[True, False] = None) -> None:
-        print("Hellow")
+        
         plot.plot_trial(self, save=save)
 
-    def my_pr(self, save: Literal[True, False] = None) -> None:
-        print("Hellow")
-        myproc.proc_trial(self, save=save)
+    def my_pr(self, save: Literal[True, False] = None, threshold=0.01) -> None:
+        print(threshold)
+        myproc.proc_trial(self, save=save, threshold=threshold)
 
     def save(self):
         """Save trial
