@@ -139,7 +139,7 @@ def _proc_waveform3(
     t_data=waveform.times
     max_list=[]
     for ti_n1, ti_n2 in zip(A_time, B_time):
-        bin_time = [(t_data >= ti_n1) & (t_data < ti_n2)]
+        bin_time = [(t_data >= ti_n1-0.2) & (t_data <= ti_n2+0.2)]
         bin_volte = v_data[bin_time]
         max_volte =bin_volte.max()
         max_list.append(max_volte)
@@ -151,22 +151,28 @@ def s_detect(
     str_time: np.array,
     ) -> None:
     s_n_list=[]
-    it1 = s_dic["times"][:-1]
-    it2 = s_dic["times"][1:]
-    last_code=s_dic["codes"][-1]
-    for s_n, time1, time2 in zip(s_dic["codes"], it1, it2):
-        ti1=list((time1 <= str_time) & ( str_time < time2))
-        ti_time1=ti1.count(True)
-        s_n_list.extend([s_n] * ti_time1)
-        if time2 == s_dic["times"][-1]:
-            ti3=list(time2 <= str_time)
-            ti_time3=ti3.count(True)
-            s_n_list.extend([last_code] * ti_time3)
-    s_n_list_1=[]
-    N_s = len(s_dic["codes"]) - len(s_n_list)
-    s_n_list_1.extend(["control"] * N_s)
+    if s_dic["codes"] != None:
+        it1 = s_dic["times"][:-1]
+        it2 = s_dic["times"][1:]
+        last_code=s_dic["codes"][-1]
+        for s_n, time1, time2 in zip(s_dic["codes"], it1, it2):
+            ti1=list((time1 <= str_time) & ( str_time < time2))
+            ti_time1=ti1.count(True)
+            s_n_list.extend([s_n] * ti_time1)
+            if time2 == s_dic["times"][-1]:
+                ti3=list(time2 <= str_time)
+                ti_time3=ti3.count(True)
+                s_n_list.extend([last_code] * ti_time3)
+        s_n_list_1=[]
+        #N_s = len(s_dic["codes"]) - len(s_n_list)
+        N_s = len(str_time) - len(s_n_list)
+        s_n_list_1.extend(["control"] * N_s)
 
-    s_n_list = s_n_list_1 + s_n_list
+        s_n_list = s_n_list_1 + s_n_list
+    
+    else:
+        N_s = len(str_time)
+        s_n_list.extend(["control"] * N_s)
 
     return s_n_list
 
@@ -191,7 +197,7 @@ def w_detect(
             ti_time3=ti3.count(True)
             W_n_list.extend([last_code] * ti_time3)
     
-    N_w = len(w_dic["codes"]) - len(W_n_list)
+    N_w = len(str_time) - len(W_n_list)
     W_n_list.extend(["pass"] * N_w)
 
     return W_n_list
@@ -284,7 +290,7 @@ class _TicksLine:
                 s_code_list.append(i_s)
                 s_time_list.append(time)
                 i_s=i_s+1
-            elif code =="w":
+            elif code =="w" or code =="3":
                 w_code_list.append(i_w)
                 w_time_list.append(time)
                 i_w=i_w+1
@@ -292,14 +298,21 @@ class _TicksLine:
                 print("Error")
                 print(f'{code} {i}/{time}')
         
-        arr_s_time = np.array(s_time_list, dtype=float)
-        diff_s_time = np.diff(arr_s_time)
-        diff_s_time1=diff_s_time>5
-        diff_s_time1=np.insert(diff_s_time1, 0, False)
-        s_code=arr_s_time[diff_s_time1]
-        s_code=np.insert(s_code, 0, arr_s_time[0])
-        s_dict["codes"] = [f'S{q}' for q in range(len(s_code))]
-        s_dict["times"] = s_code
+        if len(s_time_list) != 0:
+            arr_s_time = np.array(s_time_list, dtype=float)
+            diff_s_time = np.diff(arr_s_time)
+            diff_s_time1=diff_s_time>5
+            diff_s_time1=np.insert(diff_s_time1, 0, False)
+            arr2 = diff_s_time1[:-1] & diff_s_time1[1:]
+            arr2=np.insert(arr2, -1, False)
+            diff_s_time1[arr2]=False
+            s_code=arr_s_time[diff_s_time1]
+            s_code=np.insert(s_code, 0, arr_s_time[0])
+            s_dict["codes"] = [f'S{q}' for q in range(len(s_code))]
+            s_dict["times"] = s_code
+        else:
+            s_dict["codes"] = None
+            s_dict["times"] = None
         print(s_dict)
 
         arr_w_time = np.array(w_time_list, dtype=float)
@@ -349,7 +362,7 @@ class _TicksLine:
     #     ax1.grid()
 
 
-def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False], threshold: float) -> None:
+def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False], ch:str, threshold: float) -> None:
     # fig_height, n_subplots = _proc_n_sub(spike2py_trial)
     # if n_subplots == 1:
     #     print(
@@ -362,9 +375,11 @@ def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False], thresh
     #     figsize=(12, fig_height),
     #     gridspec_kw={"hspace": 0},
     # )
-    _proc_trial(spike2py_trial, threshold)
+    df = _proc_trial(spike2py_trial, ch, threshold)
     if save:
         _save_plot(spike2py_trial.name)
+    
+    return df
 
 
 def _proc_n_sub(spike2py_trial: "trial.Trial"):
@@ -392,7 +407,7 @@ def _proc_n_sub(spike2py_trial: "trial.Trial"):
     return fig_height, n_subplots
 
 
-def _proc_trial(spike2py_trial: "trial.Trial", threshold: float):
+def _proc_trial(spike2py_trial: "trial.Trial", ch: str, threshold: float):
     for channel, channel_type in spike2py_trial.channels:
         if channel_type == "keyboard":
             current_channel = spike2py_trial.__getattribute__(channel)
@@ -401,24 +416,28 @@ def _proc_trial(spike2py_trial: "trial.Trial", threshold: float):
             )
             s_dic, w_dic = ticks_line.myproc()
 
-        elif channel == "Myhy_R":
+        elif channel == ch:
             current_channel = spike2py_trial.__getattribute__(channel)
-            str_time, end_time=_proc_waveform2(
+            st_ti, en_ti=_proc_waveform2(
                 waveform=current_channel,
                 threshold=threshold
             )
         else:
             pass
     
-    S_n_list = s_detect(s_dic=s_dic, str_time=str_time)
-    W_n_list = w_detect(w_dic=w_dic, str_time=str_time)
+    try:
+        S_n_list = s_detect(s_dic=s_dic, str_time=st_ti)
+        W_n_list = w_detect(w_dic=w_dic, str_time=st_ti)
+    except:
+        print("Change the channel argument names.Argument names refer to 'sample.channels'.")   
 
     s_time_dict={}
     s_time_dict["stim"] = S_n_list
     s_time_dict["CCodes"] = W_n_list
-    s_time_dict["codes"] = [f'w{q}' for q in range(len(str_time))]
-    s_time_dict["start_times"] = str_time
-    s_time_dict["end_times"] = end_time
+    s_time_dict["codes"] = [f'w{q}' for q in range(len(st_ti))]
+    s_time_dict["start_times"] = st_ti
+    s_time_dict["end_times"] = en_ti
+    print(len(s_time_dict["stim"]), len(s_time_dict["CCodes"]), len(s_time_dict["codes"]), len(s_time_dict["start_times"]), len(s_time_dict["end_times"]))
 
 
     for channel, channel_type in spike2py_trial.channels:
@@ -426,15 +445,18 @@ def _proc_trial(spike2py_trial: "trial.Trial", threshold: float):
             current_channel = spike2py_trial.__getattribute__(channel)
             max_list=_proc_waveform3(
                 waveform=current_channel,
-                A_time= str_time,
-                B_time= end_time
+                A_time= st_ti,
+                B_time= en_ti
             )
             s_time_dict[channel] = max_list
         
         else:
             pass
+    #df = s_time_dict
     df = pd.DataFrame(data=s_time_dict)
     print(df)
+
+    return df
 
 
 

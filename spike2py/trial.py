@@ -142,9 +142,11 @@ class Trial:
         
         plot.plot_trial(self, save=save)
 
-    def my_pr(self, save: Literal[True, False] = None, threshold=0.01) -> None:
+    def my_pr(self, save: Literal[True, False] = None, ch = "Myhy_R", threshold=0.01) -> None:
+        df = myproc.proc_trial(self, save=save, ch = ch, threshold = threshold)
+        print(ch)
         print(threshold)
-        myproc.proc_trial(self, save=save, threshold=threshold)
+        return df
 
     def save(self):
         """Save trial
