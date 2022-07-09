@@ -185,6 +185,12 @@ def w_detect(
     it1 = w_dic["times"][:-1]
     it2 = w_dic["times"][1:]
     last_code=w_dic["codes"][-1]
+
+    it0 = w_dic["times"][0]
+    ti0=list(it0 > str_time)
+    be_time=ti0.count(True)
+    W_n_list.extend(["control"] * be_time)
+
     for w_n, time1, time2 in zip(w_dic["codes"], it1, it2):
         ti1=list((time1 <= str_time) & ( str_time <= time1+30))
         ti_time1=ti1.count(True)
@@ -375,11 +381,11 @@ def proc_trial(spike2py_trial: "trial.Trial", save: Literal[True, False], ch:str
     #     figsize=(12, fig_height),
     #     gridspec_kw={"hspace": 0},
     # )
-    df = _proc_trial(spike2py_trial, ch, threshold)
+    df, df_w = _proc_trial(spike2py_trial, ch, threshold)
     if save:
         _save_plot(spike2py_trial.name)
     
-    return df
+    return df, df_w
 
 
 def _proc_n_sub(spike2py_trial: "trial.Trial"):
@@ -454,9 +460,10 @@ def _proc_trial(spike2py_trial: "trial.Trial", ch: str, threshold: float):
             pass
     #df = s_time_dict
     df = pd.DataFrame(data=s_time_dict)
+    df_W = df.query('CCodes != ["control", "pass"]').reset_index(drop=True)
     print(df)
 
-    return df
+    return df, df_W
 
 
 
