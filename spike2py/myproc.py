@@ -138,13 +138,16 @@ def _proc_waveform3(
     v_data=waveform.values
     t_data=waveform.times
     max_list=[]
+    sum_list=[]
     for ti_n1, ti_n2 in zip(A_time, B_time):
         bin_time = [(t_data >= ti_n1-0.2) & (t_data <= ti_n2+0.2)]
         bin_volte = v_data[bin_time]
         max_volte =bin_volte.max()
         max_list.append(max_volte)
+        sum_volte =bin_volte.sum()
+        sum_list.append(sum_volte)
 
-    return max_list
+    return max_list, sum_list
 
 def s_detect(
     s_dic: dict, 
@@ -449,17 +452,21 @@ def _proc_trial(spike2py_trial: "trial.Trial", ch: str, threshold: float):
     for channel, channel_type in spike2py_trial.channels:
         if channel_type == "waveform":
             current_channel = spike2py_trial.__getattribute__(channel)
-            max_list=_proc_waveform3(
+            max_list, sum_list=_proc_waveform3(
                 waveform=current_channel,
                 A_time= st_ti,
                 B_time= en_ti
             )
             s_time_dict[channel] = max_list
+            s_time_dict[f'{channel}_auc'] = sum_list
         
         else:
             pass
     #df = s_time_dict
     df = pd.DataFrame(data=s_time_dict)
+    not_auc_col=[column for column in df.columns if not "auc" in column]
+    auc_col=[column for column in df.columns if "auc" in column]
+    df=pd.concat([df[not_auc_col], df[auc_col]],axis = 1)
     df_W = df.query('CCodes != ["control", "pass"]').reset_index(drop=True)
     print(df)
 
